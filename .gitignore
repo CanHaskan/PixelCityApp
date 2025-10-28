@@ -1,0 +1,15 @@
+# Xcode
+.DS_Store
+# Build
+build/
+*.pbxuser
+*.mode1v3
+*.perspectivev3
+# Derived Data
+DerivedData/
+# Pods
+Pods
+# Swift Package Manager
+.swiftpm/
+# Xcode Workspace (CocoaPods kullanıyorsanız genelde izlenir ama emin olmak için)
+# *.xcworkspace
