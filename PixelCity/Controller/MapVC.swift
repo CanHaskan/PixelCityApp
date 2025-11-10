@@ -28,8 +28,14 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
     var collectionView: UICollectionView?
     var flowLayout = UICollectionViewFlowLayout()
     
-    var imageUrlArray = [String]()
     var imageArray = [UIImage]()
+    var photoDataArray = [PhotoData]()
+    
+    struct PhotoData {
+        let imageUrl: String
+        let authorName: String
+        let description: String?
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -43,6 +49,8 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
         collectionView?.delegate = self
         collectionView?.dataSource = self
         collectionView?.backgroundColor = #colorLiteral(red: 1, green: 1, blue: 1, alpha: 1)
+        
+        registerForPreviewing(with: self, sourceView: collectionView!)
         
         pullUpView.addSubview(collectionView!)
     }
@@ -107,8 +115,13 @@ class MapVC: UIViewController, UIGestureRecognizerDelegate {
     }
     
     @IBAction func centerMapBtnWasPressed(_ sender: Any) {
+        let currentAuthStatus = CLLocationManager.authorizationStatus()
         if authorationStatus == .authorizedAlways || authorationStatus == .authorizedWhenInUse {
+            locationManager.startUpdatingLocation()
             centerMapOnUserLocation()
+        }
+        else {
+            configureLocationServices()
         }
     }
 }
@@ -137,7 +150,6 @@ extension MapVC: MKMapViewDelegate {
         removeProgressLbl()
         cancelAllSessions()
         
-        imageUrlArray = []
         imageArray = []
         
         collectionView?.reloadData()
@@ -154,29 +166,24 @@ extension MapVC: MKMapViewDelegate {
         mapView.addAnnotation(annotation)
         
         unsplashSearchUrl(withAnnotation: annotation, andNumberOfPhotos: 40) { (finalApiUrl) in
-                print("Final Unsplash API URL'si: \(finalApiUrl)")
             }
         
         let coordinateRegion = MKCoordinateRegion(center: touchCoordinate, latitudinalMeters: regionRadius * 2.0, longitudinalMeters: regionRadius * 2.0)
         mapView.setRegion(coordinateRegion, animated: true)
         
-        // 🚨 YENİ TEST AKIŞI: retrieveUrls başarılı olursa retrieveImages'ı başlat
         retrieveUrls(forAnnotation: annotation) { (urlsFinished) in
             if urlsFinished {
-                print("DEBUG AKIŞI: URL'ler çekildi, şimdi görseller indirilmeye başlıyor...")
                 
                 self.retrieveImages(handler: { (imagesFinished) in
                     if imagesFinished {
                         self.removeSpinner()
                         self.removeProgressLbl()
                         self.collectionView?.reloadData()
-                        print("DEBUG AKIŞI: Tüm görseller başarıyla indirildi. Collection View yenilenecek.")
                     }
                 })
             } else {
                 self.removeSpinner()
                 self.removeProgressLbl()
-                print("HATA: URL çekme işlemi başarısız oldu, indirme başlatılamadı.")
             }
         }
 
@@ -191,66 +198,55 @@ extension MapVC: MKMapViewDelegate {
     func retrieveUrls(forAnnotation annotation: DroppablePin, handler: @escaping (_ status: Bool) -> ()) {
         unsplashSearchUrl(withAnnotation: annotation, andNumberOfPhotos: 40) { (finalApiUrl) in
             
-            print("DEBUG: Oluşturulan API URL'si: \(finalApiUrl)") // 💡 DEBUG EKLENDİ: URL kontrolü
             
             AF.request(finalApiUrl).responseJSON { (response) in
                 
                 guard case let .success(jsonValue) = response.result,
                       let json = jsonValue as? Dictionary<String, AnyObject>,
                       let photoArray = json["results"] as? [Dictionary<String, AnyObject>] else {
-                    print("HATA: API isteği başarısız oldu veya JSON yapısı hatalı.")
                     handler(false)
                     return
                 }
                 
-                self.imageUrlArray = [] // Önceki URL'leri temizle
+                self.photoDataArray = []
                 
                 for photo in photoArray {
                     if let urls = photo["urls"] as? Dictionary<String, AnyObject>,
-                       let regularUrl = urls["regular"] as? String {
-                        self.imageUrlArray.append(regularUrl)
-                        // print("DEBUG: Çekilen URL: \(regularUrl)") // Çok fazla çıktı olmaması için bunu şimdilik kapalı tutalım
-                    }
+                       let regularUrl = urls["regular"] as? String,
+                       let user = photo["user"] as? Dictionary<String, AnyObject>,
+                       let authorName = user["name"] as? String {
+                        let description = photo["description"] as? String
+                        let data = PhotoData(imageUrl: regularUrl, authorName: authorName, description: description)
+                        
+                        self.photoDataArray.append(data)                    }
                 }
                 
-                print("DEBUG: Toplam \(self.imageUrlArray.count) adet fotoğraf URL'si başarıyla çekildi.") // 💡 DEBUG EKLENDİ: Sayı kontrolü
-                handler(true) // URL'leri çekme işlemi bitti
+                handler(true)
             }
         }
     }
 
     func retrieveImages(handler: @escaping (_ status: Bool) -> ()) {
-        // Dizideki her URL için indirme işlemini başlat
-        for url in imageUrlArray {
+        for photoData in photoDataArray {
             
-            // AF.request kullanarak URL'den görseli indir
-            AF.request(url).responseImage(completionHandler: { (response) in
+            AF.request(photoData.imageUrl).responseImage(completionHandler: { [weak self] (response) in
                 
-                // Başarılı indirme durumunda görseli al
+                guard let self = self else { return }
                 guard let image = response.value else {
-                    print("HATA: Görsel URL'sinden resim indirilemedi: \(url)")
                     
-                    // İndirilemeyen URL'ye rağmen kontrolü tamamlamamız gerekiyor
-                    if self.imageArray.count == self.imageUrlArray.count {
+                    if self.imageArray.count == self.photoDataArray.count {
                         handler(true)
                     }
                     return
                 }
                 
                 self.imageArray.append(image)
-                // 💡 TEST AMAÇLI print
-                print("İNDİRİLİYOR: \(self.imageArray.count). görsel indirildi. Toplam \(self.imageUrlArray.count) görsel bekleniyor.")
                             
-                self.progressLbl?.text = "\(self.imageArray.count)/\(self.imageUrlArray.count) GÖRSEL İNDİRİLDİ"
-                
-                // İlerleme etiketini güncelle
-                self.progressLbl?.text = "\(self.imageArray.count)/\(self.imageUrlArray.count) GÖRSEL İNDİRİLDİ"
-                
-                // Görsel indirildikçe Collection View'ı anlık yenile (Bir sonraki adımda etkinleşecek)
+                self.progressLbl?.text = "\(self.imageArray.count)/\(self.photoDataArray.count) GÖRSEL İNDİRİLDİ"
+                                
                 self.collectionView?.reloadData()
                 
-                // Tüm görseller indirildiğinde (indirme başarılı/başarısız fark etmeksizin) handler'ı çağır
-                if self.imageArray.count == self.imageUrlArray.count {
+                if self.imageArray.count == self.photoDataArray.count {
                     handler(true)
                 }
             })
@@ -272,16 +268,28 @@ extension MapVC: CLLocationManagerDelegate {
         if authorationStatus == .notDetermined {
             locationManager.requestAlwaysAuthorization()
         } else {
+            locationManager.startUpdatingLocation()
             return
         }
     }
     
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        if status == .authorizedAlways || status == .authorizedWhenInUse {
+            locationManager.startUpdatingLocation()
+        }
         centerMapOnUserLocation()
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let latestLocation = locations.last else { return }
+        locationManager.stopUpdatingLocation()
+        let coordinate = latestLocation.coordinate
+        let coordinateRegion = MKCoordinateRegion(center: coordinate, latitudinalMeters: regionRadius * 2.0 , longitudinalMeters: regionRadius * 2.0)
+        mapView.setRegion(coordinateRegion, animated: true)
     }
 }
 
-extension MapVC: UICollectionViewDelegate, UICollectionViewDataSource {
+extension MapVC: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout{
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
     }
@@ -290,12 +298,45 @@ extension MapVC: UICollectionViewDelegate, UICollectionViewDataSource {
         return imageArray.count
     }
     
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        
+        let cellWidth: CGFloat = 62.0
+        let cellHeight: CGFloat = 120.0
+        return CGSize(width: cellWidth, height: cellHeight)
+    }
+    
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "photoCell", for: indexPath) as? PhotoCell else {return UICollectionViewCell()}
         let imageFromIndex = imageArray[indexPath.row]
-        let imageView = UIImageView(image: imageFromIndex)
-        cell.addSubview(imageView)
+        let metaData = photoDataArray[indexPath.row]
+        cell.imageView.image = imageFromIndex
         return cell
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard let popVC = storyboard?.instantiateViewController(withIdentifier: "PopVC") as? PopVC else {return}
+        let metaData = photoDataArray[indexPath.row]
+        let image = imageArray[indexPath.row]
+        let descriptionText = metaData.description ?? ""
+        popVC.initData(forImage: image, authorName: metaData.authorName, description: descriptionText)
+        present(popVC, animated: true, completion: nil)
     }
 }
 
+extension MapVC: UIViewControllerPreviewingDelegate {
+    func previewingContext(_ previewingContext: any UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
+        guard let indexPath = collectionView?.indexPathForItem(at: location), let cell = collectionView?.cellForItem(at: indexPath) else {return nil}
+        guard let popVC = storyboard?.instantiateViewController(withIdentifier: "PopVC") as? PopVC else {return nil}
+        let metaData = photoDataArray[indexPath.row]
+        let image = imageArray[indexPath.row]
+        let descriptionText = metaData.description ?? ""
+        
+        popVC.initData(forImage: image, authorName: metaData.authorName, description: descriptionText)
+        previewingContext.sourceRect = cell.contentView.frame
+        return popVC
+    }
+    
+    func previewingContext(_ previewingContext: any UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
+        show(viewControllerToCommit, sender: self)
+    }
+}
