@@ -1,84 +1,87 @@
-# 🌆 PixelCity App
+# 📍 PixelCity App
 
-An iOS application that displays real-time photos from any selected map location using the **Unsplash API**.
-
----
-
-## 📱 Overview
-
-PixelCity allows users to tap anywhere on a map and instantly loads a gallery of high‑quality images related to that location.
+An iOS app that lets users explore real-world locations and instantly view photos from **Unsplash** based on map coordinates.
 
 ---
 
-## ✨ Features
+## 🚀 Features
 
-* 🗺 **Interactive Map** — Select any point to search related images
-* 🖼 **Unsplash API Integration** — Fetches high-resolution photos
-* ⚡️ **Async Image Loading** — Smooth UI and fast response
-* 🧩 **Dynamic CollectionView Grid** — Automatically adjusts to screen size
-* 🔍 **Full‑Screen Image Viewer**
-* 📡 **Download Progress Indicator**
-
----
-
-## 🧰 Tech Stack
-
-* Swift 5
-* UIKit
-* MapKit
-* Unsplash API
-* Alamofire (for networking)
-* UICollectionView
+* 🗺️ **Interactive Map:** Double‑tap anywhere to drop a pin.
+* 📸 **Photo Fetching:** Automatically loads photos from Unsplash for that coordinate.
+* 👤 **Author & Description:** Displays photo metadata.
+* 🔍 **Fullscreen Viewer:** Tap a photo to enlarge it.
+* 👆 **Double‑tap to close** fullscreen view.
+* 🎯 **User Location Tracking.**
 
 ---
 
-## 📸 Screenshots
+## 📱 Screenshots
 
-### 🗺 Map View
+Below are preview screens of the app:
 
-Tap anywhere to load images.
+### 🗺️ Map View
 
-<img src="assets/screenshots/MapView.png" width="240" />
+Shows your location, allows dropping pins, and displays a bottom photo strip.
 
-### 📥 Loading UI
+![Map View](assets/screenshots/MapVC.png)
 
-Shows loading state while fetching images.
+### 🖼️ Fullscreen Photo View
 
-<img src="assets/screenshots/Loading.png" width="240" />
+Displays selected image with description and author.
 
-### 🖼 Photo Grid
-
-Displays images in a clean grid layout.
-
-<img src="assets/screenshots/Gallery.png" width="240" />
+![Photo View](assets/screenshots/PopVC.png)
 
 ---
 
-## 🔧 Setup
+## 🛠️ Technologies Used
 
-1. Clone this repository
-2. Add your **Unsplash API Key** to `Constants.swift`
-3. Build & run the project in Xcode
-4. Tap on the map and explore related photos
-
----
-
-## 🔑 API Key Configuration
-
-```swift
-let UNSPLASH_API_KEY = "YOUR_API_KEY"
-```
+* **Swift**
+* **MapKit** (for map and location handling)
+* **Unsplash API** (for fetching images)
+* **URLSession / JSON Decoding**
+* **UIKit**
 
 ---
 
-## 📦 Dependencies
+## 📦 Installation
 
-* Alamofire
-* Unsplash API
+1. Clone the project:
+
+   ```bash
+   git clone https://github.com/YourUsername/PixelCity.git
+   ```
+2. Open the project in Xcode:
+
+   ```bash
+   open PixelCity.xcodeproj
+   ```
+3. Run on Simulator or Device.
 
 ---
 
-## 📜 License
+## 🔑 API Key Setup
 
-This project is open-source and free to use.
+This app uses the Unsplash API.
+
+1. Create a free account at **unsplash.com/developers**.
+2. Get your **Access Key**.
+3. Add your key to `Constants.swift`:
+
+   ```swift
+   let UNSPLASH_API_KEY = "YOUR_KEY_HERE"
+   ```
+
+---
+
+## 📄 License
+
+This project is for educational purposes.
+
+---
+
+If you want, I can also add:
+✅ A badge section (platform, Swift version)
+✅ A GIF demo
+✅ A features table
+Just tell me!
 
