@@ -79,9 +79,5 @@ This project is for educational purposes.
 
 ---
 
-If you want, I can also add:
-✅ A badge section (platform, Swift version)
-✅ A GIF demo
-✅ A features table
-Just tell me!
+
 
